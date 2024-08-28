@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>jsPsych Experiment</title>
+    <script src="https://cdn.jsdelivr.net/npm/jspsych@6.3.1/jspsych.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspsych@6.3.1/plugins/jspsych-html-keyboard-response.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspsych@6.3.1/plugins/jspsych-fullscreen.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jspsych@6.3.1/css/jspsych.css">
+    <style>
+        .jspsych-content {
+            text-align: center;
+        }
+        #score_page {
+            display: block;
+            background-image: url('./material/score_page.jpg');
+            background-size: contain;
+            position: fixed;
+            top: 0;
+            left: 3%;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+        }
+        #background {
+            display: block;
+            background-image: url('./material/background.jpg');
+            background-size: contain;
+            position: fixed;
+            top: 0;
+            left: 5%;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+        }
+        .instruction-img, .instruction_2-img {
+            max-width: 90%;
+            max-height: 90%;
+            display: block;
+            margin: auto;
+        }
+        .prompt-message {
+            position: fixed;
+            bottom: 5vh;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5em;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .stimulus-container {
+            position: relative;
+            display: inline-block;
+            width: 55vw;
+            text-align: center;
+            top: 46.6vh;
+            left: -23.8vw;
+        }
+        .stimulus-box {
+            max-width: 35%;
+            max-height: 35%;
+            display: block;
+            margin: 0 auto;
+            padding: 10px;
+        }
+        .score {
+            position: fixed;
+            top: 55vh;
+            left: 48vw;
+            font-size: 3.5em;
+            color: green;
+        }
+        .green-box, .blue-box, .split-box {
+            width: 13.5vw; /* Adjust width as a percentage of the viewport width */
+            height: 25vh; /* Adjust height as a percentage of the viewport height */
+            border: 0.4vw solid; /* Adjust border width as a percentage of the viewport width */
+        }
+        .green-box {
+            border-color: green;
+        }
+        .blue-box {
+            border-color: rgb(79, 183, 217);
+        }
+        .split-box {
+            border-image: linear-gradient(to right, green 50%, rgb(79, 183, 217) 50%);
+            border-image-slice: 1;
+        }
+        #left-box {
+            position: fixed;
+            top: 58.7vh;
+            left: 24vw;
+        }
+        #right-box {
+            position: fixed;
+            top: 58.7vh;
+            left: 60.8vw;
+        }
+        #up-box {
+            position: fixed;
+            top: 17vh;
+            left: 42.8vw;
+        }
+        #top_text {
+            position: absolute;
+            font-size: 2.2em;
+            top: 7vh; 
+            left: 27vw;    
+        }
+        #top_text_c {
+            position: absolute;
+            font-size: 2.2em;
+            top: 7vh; 
+            left: 32vw; 
+        }
+    </style>
+</head>
+<body>
+    <div id="background"></div>
+    <script>
+        // Initialize jsPsych
+        var timeline = [];
+        var number_of_trials = 30;
+        var numTrainingTrials = number_of_trials; // Number of training trials
+        
+        var currentTrial = 0; // To keep track of the current trial
+        var currentPhase = 0; // Index to keep track of the current phase
+        var phases = ['block1', 'block2', 'block3']; // List of phases
+        var totalScore = 0; // To keep track of the total score
+        var computerTotalScore = 0;
+        var show_computer_choice_t = 2500;
+        // var matching_t = 500;
+        // Define choices
+        const choices = ['paper', 'scissors', 'rock'];
+
+        // Define scoring rules
+        const scores = {
+            'paper': {'rock': 1, 'scissors': -1, 'paper': 0},
+            'scissors': {'paper': 1, 'rock': -1, 'scissors': 0},
+            'rock': {'scissors': 1, 'paper': -1, 'rock': 0}
+        };
+
+        // Welcome screen with full screen button
+        timeline.push({
+            type: 'fullscreen',
+            message: "<div style='font-size: 35px'>" 
+                    + "<p>Welcome to the experiment!</p>" 
+                    + "<p>Press the button below to go full screen and start the experiment.</p></div>",
+            button_label: 'Click to go full screen',
+            fullscreen_mode: true
+        });
+
+        // Add instruction screens
+        const instructions = [
+            './material/tut/tut0.jpg',
+            './material/tut/tut0_1.jpg',
+            './material/tut/tut0_2.jpg'
+        ];
+
+        instructions.forEach((instruction, index) => {
+            timeline.push({
+                type: 'html-keyboard-response',
+                stimulus: `<img class="instruction-img" src="${instruction}" alt="Instruction ${index + 1}">`,
+                prompt: '<div class="prompt-message">Press any key to continue.</div>',
+                choices: jsPsych.ALL_KEYS
+            });
+        });
+
+        const instructions_2 = [
+            './material/tut/tut1.jpg',
+            './material/tut/tut2.jpg'
+        ];
+
+        instructions_2.forEach((instruction_2, index) => {
+            timeline.push({
+                type: 'html-keyboard-response',
+                stimulus: `<img class="instruction_2-img" src="${instruction_2}" alt="Instruction_2 ${index + 1}">`,
+                prompt: '<div class="prompt-message">Press any key to continue.</div>',
+                choices: jsPsych.ALL_KEYS
+            });
+        });
+
+        function mn_RPS_config() {
+            let task = {
+                fxn: mn_RPS_task,
+                is_dynamic: true,
+                n_trials: number_of_trials,
+                n_blocks: 3,
+                game: {
+                    strat_space: 3,
+                    win: 1,
+                    loss: -1,
+                    tie: 0,
+                  
+                },
+                bot: {
+                    params: {
+                        alpha: 0.9,
+                        beta: 10
+                    },
+                    levels: []
+                }
+            };
+            
+            // Create random bot level sequence
+            let levels = [0, 1, 2];
+            let n_levels = levels.length;
+            let generate_seq = true;
+
+            while (generate_seq) {
+                let block_level_k = jsPsych.randomization.shuffle(levels);
+                let level_changes = block_level_k.slice(1).map((level, index) => level - block_level_k[index]);
+                if (block_level_k[0] < 2 && level_changes.every((change, index) => index % n_levels !== n_levels - 1 || change !== 0)) {
+                    generate_seq = false;
+                    task.bot.levels = block_level_k;
+                }
+            }
+
+            return task;
+        }
+        
+        function comp_paymatrix(data) {
+            let strat_space = task.game.strat_space;
+            let win = task.game.win;
+            let loss = task.game.loss;
+            let tie = task.game.tie;
+
+            // 初始化支付矩阵
+            let pay_matrix_A = Array(strat_space).fill(null).map(() => Array(strat_space).fill(tie));
+            let pay_matrix_B = Array(strat_space).fill(null).map(() => Array(strat_space).fill(tie));
+
+            // 填充支付矩阵 A
+            for (let i = 0; i < strat_space; i++) {
+                if (i === 0) {
+                    pay_matrix_A[i + 1][i] = win;
+                    pay_matrix_A[strat_space - 1][i] = loss;
+                } else if (i >= 1 && i < strat_space - 1) {
+                    pay_matrix_A[i - 1][i] = loss;
+                    pay_matrix_A[i + 1][i] = win;
+                } else if (i === strat_space - 1) {
+                    pay_matrix_A[0][i] = win;
+                    pay_matrix_A[i - 1][i] = loss;
+                }
+            }
+            pay_matrix_B = pay_matrix_A
+         
+            return [pay_matrix_A, pay_matrix_B];
+        }
+
+        function matrixVectorMultiplication(matrix, vector) {
+            return matrix.map(row => row.reduce((sum, val, i) => sum + val * vector[i], 0));
+        }
+
+        function weightedAverage(prev, curr, alpha) {
+            return prev.map((p, i) => (1 - alpha) * p + alpha * curr[i]);
+        }
+
+        function mn_RPS_task(data, task, type, env, iTrial) {
+
+            if (type === 'init') {
+                let n_trials = task.n_trials;
+                let n_actions = task.game.strat_space;
+
+                // Payoff matrices
+                
+                let [pi_subj, pi_bot] = comp_paymatrix(task.game);
+                env.pi_subj = pi_subj;
+                env.pi_bot = pi_bot;
+                
+
+                // Attractions
+                env.f_mat_bot = Array(n_trials * 3).fill(null).map(() => Array(n_actions).fill(NaN));
+                env.f_mat_subj = Array(n_trials * 3).fill(null).map(() => Array(n_actions).fill(NaN));
+                env.f_mat_bot[0] = Array(n_actions).fill(1 / n_actions);
+                env.f_mat_subj[0] = Array(n_actions).fill(1 / n_actions);
+
+
+                // Adaptive noise structure
+                env.success = Array(n_trials * 3).fill(NaN);
+                env.curr_beta = Array(n_trials * 3).fill(NaN);
+                env.noisy_trial = Array(n_trials * 3).fill(0);
+                env.noise_breaker = Array(n_trials * 3).fill(0);
+                env.tie_breaker = Array(n_trials * 3).fill(0);
+                env.circuit_breaker = Array(n_trials * 3).fill(0);
+                env.success[1] = 1 / n_actions; 
+                env.curr_beta[1] = 4; 
+
+                //let n_actions = env.pi_subj[0].length;
+                let sum_vector = env.pi_subj.map(row => row.reduce((a, b) => a + b) + 1e-4);
+                let total_sum = sum_vector.reduce((a, b) => a + b);
+                env.greedy_dist = sum_vector.map(sum => sum / total_sum);
+
+                /*
+                env.greedy_dist = env.pi_subj.map(row => row.reduce((a, b) => a + b) + 1e-4)
+                                    .map(sum => 1 / sum);
+                */
+                //env.level_k = Array(n_trials).fill(null).map((_, idx) => task.bot.levels[idx % task.bot.levels.length]);
+                
+                env.level_k = [];
+                task.bot.levels.forEach(level => {
+                    for (let i = 0; i < n_trials; i++) {
+                        env.level_k.push(level);
+                    }
+                });
+            
+                console.log(env.level_k);
+                
+                // Data outputs
+                data.win = task.game.win;
+                data.loss = task.game.loss;
+                data.tie = task.game.tie;
+                data.strat_space = task.game.strat_space;
+                data.trial = Array.from({ length: task.n_trials * task.n_blocks }, (_, i) => i + 1);
+            }
+
+            else if (type === 'update') {
+                let n_actions = task.game.strat_space;
+
+                if (iTrial === 1) {
+                    data.choice_other[iTrial] = jsPsych.randomization.sampleWithReplacement(choices, 1, env.greedy_dist)[0];
+                    //data.choice_other[iTrial] = jsPsych.randomization.sampleWithReplacement(env.greedy_dist, 1)[0];
+                    //console.log(jsPsych.randomization.sampleWithReplacement(choices, 1, env.greedy_dist)[0]);
+                    
+                    
+                } else {
+                    let curr_k = env.level_k[iTrial - 1];
+                    let n_level = curr_k + 1;
+                    let bot_resp_k = Array(n_level).fill(null).map(() => Array(n_actions).fill(NaN));
+
+                    let f_bot = env.f_mat_bot[iTrial - 1];
+                    let f_subj = env.f_mat_subj[iTrial - 1];
+         
+                    let { beta, noisy_trial, success, tie_breaker, rep_bounds } = get_noise_level(iTrial, data, env);
+                    env.success[iTrial] = success;
+                    env.curr_beta[iTrial] = beta;
+                    env.noisy_trial[iTrial] = noisy_trial;
+                    env.tie_breaker[iTrial] = tie_breaker;
+                    
+                    for (let k = 0; k <= curr_k; k++) {
+                        if (k === 0) {
+                            bot_resp_k[0] = softmax_fxn(f_bot, beta);
+                        } else if (k === 1) {
+                            bot_resp_k[1] = softmax_fxn(matrixVectorMultiplication(env.pi_bot, f_subj), beta);
+                        } else if (k === 2) {
+                            const bot_pred = softmax_fxn(matrixVectorMultiplication(env.pi_subj, f_bot), beta);
+                            bot_resp_k[2] = softmax_fxn(matrixVectorMultiplication(env.pi_bot, bot_pred), beta);
+                        } else {
+                            const bot_pred = softmax_fxn(matrixVectorMultiplication(env.pi_subj, bot_resp_k[k - 2]), beta);
+                            bot_resp_k[k] = softmax_fxn(matrixVectorMultiplication(env.pi_bot, bot_pred), beta);
+                        }
+                    }
+                    
+                    data.p_values = [];
+                    let p = bot_resp_k[curr_k];
+                    //let p = bot_resp_k[bot_resp_k.length - 1];
+                    
+    
+                    console.log("Trial:", iTrial);
+                    console.log("f_bot:", f_bot);
+                    console.log("f_subj:", f_subj);
+                    console.log("bot_resp_k:", bot_resp_k[curr_k]);
+                    console.log("Selected p:", p);
+                    console.log("beta:", beta);
+                    console.log("noisy:", noisy_trial);
+                    console.log("circuit_breaker:", env.circuit_breaker);
+                    console.log("rep_bounds:" ,rep_bounds);
+
+                    if (noisy_trial===1) {
+                        let max_idx = p.indexOf(Math.max(...p));
+                        p[max_idx] = 0;
+                        let sum_p = p.reduce((a, b) => a + b, 0);
+                        p = p.map(v => v / sum_p);
+
+                        let n_max = Math.floor(Math.random() * 2) + 1;
+                        let prior_noisy_trials = env.curr_beta.slice(-n_max).filter(v => v < 1).length;
+                        let prior_actions_identical = data.choice_other.slice(-n_max).every(v => v === data.choice_other.slice(-n_max)[0]);
+                        if (prior_noisy_trials >= n_max && prior_actions_identical) {
+                            p[data.choice_other[iTrial - 1]] = 0;
+                            let new_sum_p = p.reduce((a, b) => a + b, 0);
+                            p = p.map(v => v / new_sum_p);
+                            env.noise_breaker[iTrial] = 1;
+                        }
+                    }
+                    
+                    let max_rep_action = Math.floor(Math.random() * (rep_bounds[1] - rep_bounds[0] + 1)) + rep_bounds[0];
+                    if (iTrial >= max_rep_action) {
+                        let choices_own_diff = data.choice_own.slice(Math.max(0, iTrial - max_rep_action), iTrial);
+                        let choices_other_diff = data.choice_other.slice(Math.max(0, iTrial - max_rep_action), iTrial);
+                            
+                        let is_own_repeated = new Set(choices_own_diff).size === 1; 
+                        let is_other_repeated = new Set(choices_other_diff).size === 1; 
+                            
+                        if (noisy_trial===0 && curr_k !== 1 && (is_own_repeated || is_other_repeated)) {
+                            //if (!noisy_trial && (is_own_repeated || is_other_repeated)) {
+                            let max_idx = p.indexOf(Math.max(...p)); 
+                            p[max_idx] = 0;                        
+                            p = p.map((prob, idx) => idx !== max_idx ? 1 : prob);                                                   
+                            let sumP = p.reduce((a, b) => a + b, 0);
+                            p = p.map(prob => prob / sumP);
+                            env.circuit_breaker[iTrial] = 1; 
+                            }
+                        
+                       
+                    data.p_values.push(p);
+                    console.log("Selected p:", p);
+                    //console.log("max_rep_action:" ,max_rep_action);
+                    }
+                    data.choice_other[iTrial] = jsPsych.randomization.sampleWithReplacement(choices, 1, p)[0];
+                    //data.choice_other[iTrial] = jsPsych.randomization.sampleWithReplacement(p, 1)[0];
+    
+                }
+                
+                // Update attractions
+
+                let al = task.bot.params.alpha;
+
+                // Ensure iTrial - 1 doesn't go below 0 (similar to MATLAB's max(1, iTrial-1))
+                let prevIndex = Math.max(0, iTrial - 1);
+
+                // Updating env.f_mat_subj
+                let currTrial_subj = Array(n_actions).fill(0);
+                //currTrial_subj[data.choice_own[iTrial]] = 1;
+                currTrial_subj[data.choice_own[iTrial - 1]] = 1;
+                //const choiceIndex_subj = choices.indexOf(data.choice_own[iTrial - 1]);
+                //currTrial_subj[choiceIndex_subj] = 1;
+                //console.log(`Trial ${iTrial}:`, currTrial_subj);
+                //console.log(data.choice_own[iTrial]);
+                env.f_mat_subj[iTrial] = env.f_mat_subj[iTrial - 1].map((v, idx) => (1 - al) * v + al * currTrial_subj[idx]);
+                
+
+                // Updating env.f_mat_bot
+                let currTrial_bot = Array(n_actions).fill(0);
+                //currTrial_bot[data.choice_other[iTrial]] = 1;
+                //console.log(`Trial ${iTrial}:`, currTrial_bot);
+                //data.choice_others[iTrial] = choices.indexOf(data.choice_other[iTrial]);
+                const choiceIndex_bot = choices.indexOf(data.choice_other[iTrial]);
+                currTrial_bot[choiceIndex_bot] = 1;
+                env.f_mat_bot[iTrial] = env.f_mat_bot[iTrial - 1].map((v, idx) => (1 - al) * v + al * currTrial_bot[idx]);
+                
+               
+                console.log("env.f_mat_subj[iTrial]:", env.f_mat_subj[iTrial]);
+
+               
+                console.log("env.f_mat_bot[iTrial]:", env.f_mat_bot[iTrial]);
+                // Compute scores
+                //data.score_own[iTrial] = env.pi_subj[data.choice_own[iTrial]][data.choice_others[iTrial]];
+                //data.score_other[iTrial] = env.pi_bot[data.choice_others[iTrial]][data.choice_own[iTrial]];
+                data.score_own = data.cal_score;
+                data.score_other = - data.cal_score;
+                console.log("score_own:", data.score_own);
+                console.log("cal_score", data.cal_score);
+            }
+        }
+        
+
+        function get_noise_level(iTrial, data, env) {
+            let level_k = env.level_k[iTrial - 1];
+
+            let rep_bounds = [3,4];
+            let success_criterion = 0.5;
+            let time_horizon = 5;
+            let skeweness = 1.3;
+
+            let streak_bounds = env.level_k[iTrial - 1] === 0 ? [1, 2] : [1, 3];
+            let streak_max = Math.floor(Math.random() * 2) + 3;
+
+            let types = ['wins', 'ties', 'losses'];
+            let streak = {};
+            let recent = {};
+
+            types.forEach(type => {
+                switch (type) {
+                    case 'wins':
+                        recent.wins = data.score_own.slice(Math.max(0, iTrial - time_horizon)).map(score => score > 0);
+                        streak.wins = calculateStreak(recent.wins, streak_bounds[1]);
+                        break;
+                    case 'ties':
+                        recent.ties = data.score_own.slice(Math.max(0, iTrial - streak_max)).map(score => score === 0);
+                        streak.ties = calculateStreak(recent.ties, streak_max);
+                        break;
+                    case 'losses':
+                        recent.losses = data.score_own.slice(Math.max(0, iTrial - streak_max)).map(score => score < 0);
+                        streak.losses = calculateStreak(recent.losses, streak_max);
+                        break;
+                }
+            });
+
+            let success = recent.wins.filter(Boolean).length / recent.wins.length;
+            console.log("success:", success);
+
+            let beta = 10;
+            let noisy_trial = 0;
+            let tie_breaker = 0;
+
+            
+            if (streak.losses >= streak_max || streak.ties >= streak_max) {
+                beta = 1e-3;
+                noisy_trial = 1;
+                tie_breaker = 1;
+            } else if (success >= success_criterion && streak.wins >= streak_bounds[0]) {
+                let chance_level = Math.pow(1 / (streak_bounds[1] + 1 - streak.wins), skeweness);
+                if (Math.random() < chance_level || streak.wins >= streak_bounds[1]) {
+                    beta = 1e-3;
+                    noisy_trial = 1;
+                }
+            }
+
+            return { beta, noisy_trial, success, tie_breaker, rep_bounds };
+        }
+
+        function calculateStreak(arr, max) {
+            let streak = 0;
+            for (let i = 1; i <= max; i++) {
+                if (arr.slice(-i).every(Boolean)) {
+                    streak = i;
+                } else {
+                    break;
+                }
+            }
+            return streak;
+        }
+
+        function softmax_fxn(inputs, beta) {
+            let exps = inputs.map(x => Math.exp(beta * x));
+            let sumExps = exps.reduce((a, b) => a + b);
+            return exps.map(x => x / sumExps);
+        }
+
+
+        let task = mn_RPS_config();
+        let env = {};
+        let data = {
+            choice_own: [],
+            choice_other: [],
+            //choice_others:[],
+            cal_score:[],
+            score_own: [],
+            score_other: [],
+            strat_space: task.game.strat_space,
+            win: task.game.win,
+            loss: task.game.loss,
+            tie: task.game.tie,
+            trial: []
+        };
+
+        //let participant_choice = [];
+
+        mn_RPS_task(data, task, 'init', env, 0);
+
+        // Create participant choice trial
+        function createParticipantChoiceTrial(block) {
+            return {
+                type: 'html-keyboard-response',
+                stimulus: `<div id="score_page"></div>`,
+                choices: ['arrowup', 'arrowleft', 'arrowright'],
+                on_finish: function(data) {
+                    let participantChoice;
+                    let participantChoiceBox = '';
+                    switch (data.response) {
+                        case 'arrowup':
+                            participantChoice = 'paper';
+                            participantChoiceBox = '<div id="up-box" class="green-box"></div>';
+                            break;
+                        case 'arrowleft':
+                            participantChoice = 'scissors';
+                            participantChoiceBox = '<div id="left-box" class="green-box"></div>';
+                            break;
+                        case 'arrowright':
+                            participantChoice = 'rock';
+                            participantChoiceBox = '<div id="right-box" class="green-box"></div>';
+                            break;
+                    }
+                    /*
+                    jsPsych.data.addDataToLastTrial({
+                        //test: data.response,
+                        participant_choice: participantChoice,
+                        blcok: block
+                    });
+                    */
+                    console.log('Participant choice:', participantChoice);
+                    console.log('Choices array:', choices);
+                    const choiceIndex = choices.indexOf(participantChoice);
+                    console.log('Choice index:', choiceIndex);
+                    //data.choice_own.push(participantChoice);
+                    //participant_choice = choices.indexOf(participantChoice);
+                    //data.choice_own.push(participant_choice);
+                    const rt = data.rt;
+                    updateGlobalData(participantChoice, choiceIndex);
+
+                    // Show participant choice
+                    jsPsych.addNodeToEndOfTimeline({
+                        type: 'html-keyboard-response',
+                        stimulus: `<div id="score_page">
+                        
+                            <div class="stimulus-container">
+                                        ${participantChoiceBox}
+                                    </div>
+                                </div>`,
+                        choices: jsPsych.NO_KEYS,
+                        trial_duration: show_computer_choice_t - rt, //(****)
+                        on_finish: function() {
+                            // Schedule computer choice trial
+                            jsPsych.addNodeToEndOfTimeline(createComputerChoiceTrial(participantChoice, participantChoiceBox, block));
+                        }
+                        
+                    });
+                }
+
+            };
+            
+        }
+
+        function updateGlobalData(participantChoice, choiceIndex) {
+                    data.choice_own.push(choiceIndex);
+                }
+
+        // Create computer choice trial
+        function createComputerChoiceTrial(participantChoice, participantChoiceBox, block) {
+            
+
+            //let start_idx = (round - 1) * task.n_trials;
+            //let end_idx = start_idx + task.n_trials;
+            //let level_k = env.level_k.slice(start_idx, end_idx);
+            //let current_level = level_k[currentTrial % task.n_trials]; // Calculate the current level
+
+            mn_RPS_task(data, task, 'update', env, currentTrial + 1);
+
+            //const computerChoice = choices[mn_RPS_task(data, task, 'update', env, currentTrial + 1)];
+            
+            let start_idx = currentPhase * numTrainingTrials;
+            let level_k = env.level_k[start_idx + currentTrial % numTrainingTrials];
+
+            const computerChoice = data.choice_other[currentTrial + 1];
+            //const computerChoice = choices[Math.floor(Math.random() * choices.length)];
+            const score = scores[participantChoice][computerChoice];
+            data.cal_score.push(score);
+            totalScore += score; // Accumulate participant score
+            computerTotalScore -= score; // Accumulate computer score
+            
+
+            
+
+            let computerChoiceBox = '';
+            switch (computerChoice) {
+                case 'paper':
+                    computerChoiceBox = '<div id="up-box" class="blue-box"></div>';
+                    break;
+                case 'scissors':
+                    computerChoiceBox = '<div id="left-box" class="blue-box"></div>';
+                    break;
+                case 'rock':
+                    computerChoiceBox = '<div id="right-box" class="blue-box"></div>';
+                    break;
+            }
+
+            let combinedBox = participantChoiceBox;
+            if (participantChoice === computerChoice) {
+                switch (participantChoice) {
+                    case 'paper':
+                        combinedBox = '<div id="up-box" class="split-box"></div>';
+                        break;
+                    case 'scissors':
+                        combinedBox = '<div id="left-box" class="split-box"></div>';
+                        break;
+                    case 'rock':
+                        combinedBox = '<div id="right-box" class="split-box"></div>';
+                        break;
+                }
+            }
+
+            const choiceToNumber = {
+                'paper': 0,
+                'scissors': 1,
+                'rock': 2
+            };
+
+            return {
+                type: 'html-keyboard-response',
+                stimulus: `<div id="score_page">
+                            <div class="stimulus-container">
+                                ${combinedBox}
+                                ${participantChoice !== computerChoice ? computerChoiceBox : ''}
+                                <div class="score">${score}pt</div>
+                            </div>
+                        </div>`,
+                choices: jsPsych.NO_KEYS,
+                trial_duration: 1000, // Show for 1 second
+                on_finish: function() {
+
+                    const trialsInBlock = numTrainingTrials; // Total number of trials in each block
+                    const trialNumberInBlock = (currentTrial % trialsInBlock) + 1;
+                    // Generate record label based on trial number
+                    //const recordLabel = `trial${trialNumberInBlock}`;
+
+                    const blockNumber = parseInt(block.replace(/\D/g, ''), 10);
+
+                    jsPsych.data.addDataToLastTrial({
+                        participant_choice: participantChoice,
+                        participant_choice_num: choiceToNumber[participantChoice],
+                        computer_choice: computerChoice,
+                        computer_choice_num: choiceToNumber[computerChoice],
+                        participants_score: score,
+                        computer_score: -score,
+                        participant_total_score: totalScore,
+                        computer_total_score: computerTotalScore,
+                        block: blockNumber ,
+                        trial: trialNumberInBlock,
+                        level_k: level_k
+                    });
+
+                    console.log('Current Trial:', currentTrial);
+                    console.log('Computer Choice:', computerChoice);
+                    
+                    currentTrial++;
+                    const totalTrials = phases.length * numTrainingTrials;
+                    if (currentTrial < totalTrials) {
+                        if (currentTrial % numTrainingTrials === 0) {
+                            // Increment round after each numTrainingTrials
+                            currentPhase++;
+                            jsPsych.addNodeToEndOfTimeline(createPhaseIntro(phases[currentPhase]));
+                        } else {
+                            jsPsych.addNodeToEndOfTimeline(createParticipantChoiceTrial(phases[currentPhase]));
+                        }
+                    } else {
+                        jsPsych.addNodeToEndOfTimeline(endExperiment());
+                    }
+                    
+                }
+            };
+        }
+
+        // Create phase introduction screen
+        // Create phase introduction screen
+        function createPhaseIntro(phase) {
+            const timeline = [];
+
+            // Calculate the previous phase
+            const phaseNumber = parseInt(phase.replace('block', ''), 10);
+            const previousPhase = `blokc${phaseNumber - 1}`;
+
+            // Only add the completion message if phase is not 'round1'
+            if (phase !== 'block1') {
+                timeline.push({
+                    type: 'html-keyboard-response',
+                    stimulus: `<div style='font-size: 35px'><p>Congratulations, you have finished ${previousPhase.replace(/^\w/, (c) => c.toUpperCase())}!</p></div>`,
+                    choices: jsPsych.ALL_KEYS,
+                    prompt: '<div class="prompt-message">Press any key to continue.</div>',
+                    on_finish: function() {
+                        jsPsych.addNodeToEndOfTimeline({
+                            timeline: [
+                                {
+                                    type: 'html-keyboard-response',
+                                    stimulus: `<div style='font-size: 35px'><p>We are matching your opponents...</p></div>`,
+                                    choices: jsPsych.NO_KEYS,
+                                    trial_duration: (Math.floor(Math.random() * 6) + 5) * 1000,
+                                    on_finish: function() {
+                                        // After the "matching" page, start the phase introduction
+                                        jsPsych.addNodeToEndOfTimeline({
+                                            type: 'html-keyboard-response',
+                                            stimulus: `<div style='font-size: 35px'><p>Now starting ${phase.replace(/^\w/, (c) => c.toUpperCase())}.</p></div>`,
+                                            choices: jsPsych.ALL_KEYS,
+                                            prompt: '<div class="prompt-message">Press any key to continue.</div>',
+                                            on_finish: function() {
+                                                // After phase intro, start the trials for this phase
+                                                jsPsych.addNodeToEndOfTimeline(createParticipantChoiceTrial(phase));
+                                            }
+                                        });
+                                    }
+                                }
+                            ]
+                        });
+                    }
+                });
+            } else {
+                timeline.push({
+                    type: 'html-keyboard-response',
+                    stimulus: `<div style='font-size: 35px'><p>We are matching your opponents...</p></div>`,
+                    choices: jsPsych.NO_KEYS,
+                    trial_duration: (Math.floor(Math.random() * 6) + 5) * 1000, //  (5~10)     
+                    on_finish: function() {
+                        // After the "matching" page, start the phase introduction
+                        jsPsych.addNodeToEndOfTimeline({
+                            type: 'html-keyboard-response',
+                            stimulus: `<div style='font-size: 35px'><p>Now starting ${phase.replace(/^\w/, (c) => c.toUpperCase())}.</p></div>`,
+                            choices: jsPsych.ALL_KEYS,
+                            prompt: '<div class="prompt-message">Press any key to continue.</div>',
+                            on_finish: function() {
+                                // After phase intro, start the trials for this phase
+                                jsPsych.addNodeToEndOfTimeline(createParticipantChoiceTrial(phase));
+                            }
+                        });
+                    }
+                });
+            }
+
+            return { timeline: timeline };
+        }
+
+
+
+        function endExperiment() {
+            return {
+                type: 'html-keyboard-response',
+                stimulus: `<div style='font-size: 35px'>
+                                <p>Thank you for participating!</p>
+                                <p>Your data is being saved.</p>
+                                <p>Your total score: ${totalScore}</p>
+                                <p>Computer's total score: ${computerTotalScore}</p>
+                            </div>`,
+                choices: jsPsych.NO_KEYS,
+                trial_duration: 2000, // Display message for 3 seconds
+                on_finish: function() {
+                    var data = jsPsych.data.get().csv();
+                    
+                    // Save the data to a local file
+                    var blob = new Blob([data], {type: 'text/csv'});
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    // Get current date and time
+                    var now = new Date();
+                    var year = now.getFullYear();
+                    var month = String(now.getMonth() + 1).padStart(2, '0');
+                    var day = String(now.getDate()).padStart(2, '0');
+                    var hours = String(now.getHours()).padStart(2, '0');
+                    var minutes = String(now.getMinutes()).padStart(2, '0');
+                    var seconds = String(now.getSeconds()).padStart(2, '0');
+                    var timestamp = year + month + day + hours + minutes + seconds;
+                    a.download = 'experiment_data_' + timestamp + '.csv';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+            };
+        }
+
+        // Start the experiment with the introduction for the first round
+        timeline.push(createPhaseIntro(phases[currentPhase]));
+
+        // Start the experiment
+        jsPsych.init({
+            timeline: timeline,
+            on_finish: function() {
+                // You don't need to handle data saving here anymore
+            }
+        });
+    </script>
+</body>
+</html>
